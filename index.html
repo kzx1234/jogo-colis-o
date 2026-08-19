@@ -102,7 +102,7 @@
       font-size: 2rem;
     }
 
-    /* ---------- JOGO (inicialmente escondido) ---------- */
+    /* ---------- JOGO ---------- */
     #gameContainer {
       display: none;
       opacity: 0;
@@ -262,6 +262,32 @@
       justify-content: center;
       margin-top: 6px;
     }
+    .mass-indicators {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      justify-content: center;
+      background: #0f293b;
+      padding: 6px 18px;
+      border-radius: 60px;
+      border: 1px solid #3f7188;
+      margin-top: 6px;
+    }
+    .mass-indicators .item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #d4e9ff;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    .mass-indicators .dot {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 1px solid #ffffff66;
+    }
     @media (max-width: 550px) {
       #startScreen h1 { font-size: 2.5rem; }
       .grupo-nomes { font-size: 1.2rem; padding: 10px 16px; }
@@ -302,6 +328,15 @@
         </div>
       </div>
 
+      <!-- INDICADORES DE MASSA INDIVIDUAIS -->
+      <div class="footer-center">
+        <div class="mass-indicators">
+          <span class="item"><span class="dot" style="background:#e06b3d;"></span> Basquete: <strong>2.0 kg</strong></span>
+          <span class="item"><span class="dot" style="background:#3b8fc2;"></span> Vôlei: <strong>0.8 kg</strong></span>
+          <span class="item"><span class="dot" style="background:#e6e6e6;"></span> Pequena: <strong>0.2 kg</strong></span>
+        </div>
+      </div>
+
       <div class="footer-center">
         <div class="key-hint">
           <span><kbd>W</kbd>↑ <kbd>S</kbd>↓ <span style="color:#e06b3d;">●</span> basquete</span>
@@ -325,17 +360,12 @@
     const gameContainer = document.getElementById('gameContainer');
     const startBtn = document.getElementById('startBtn');
 
-    // Mostrar jogo e esconder tela inicial
     startBtn.addEventListener('click', function() {
       startScreen.style.opacity = '0';
       startScreen.style.transform = 'scale(0.96)';
       setTimeout(() => {
         startScreen.style.display = 'none';
         gameContainer.classList.add('active');
-        // inicia o loop do jogo (já estava, mas garantimos)
-        if (typeof gameLoop === 'function') {
-          // se já estiver rodando, ok
-        }
       }, 300);
     });
 
@@ -345,13 +375,11 @@
     const energySpan = document.getElementById('energyDisplay');
     const massSpan = document.getElementById('massDisplay');
 
-    // ---------- CONSTANTES FÍSICAS ----------
     const GRAVITY = 0.35;
     const FLOOR_Y = 410;
     const WALL_LEFT = 30;
     const WALL_RIGHT = 770;
 
-    // ---------- BOLAS ----------
     const BASKETBALL = { radius: 24, mass: 2.0, color: '#e06b3d', label: '🏀', restitution: 0.65 };
     const VOLLEYBALL = { radius: 20, mass: 0.8, color: '#3b8fc2', label: '🏐', restitution: 0.60 };
     const SMALLBALL  = { radius: 14, mass: 0.2, color: '#e6e6e6', label: '⚪', restitution: 0.55 };
@@ -386,7 +414,6 @@
 
     let isRunning = true;
 
-    // ---------- FUNÇÕES AUXILIARES ----------
     function resetPositions() {
       balls = initBalls();
       for (let b of balls) { b.vx = 0; b.vy = 0; }
@@ -412,7 +439,6 @@
       massSpan.textContent = totalMass.toFixed(1);
     }
 
-    // ---------- COLISÕES ----------
     function resolveCollisions() {
       const len = balls.length;
       for (let i = 0; i < len; i++) {
@@ -447,7 +473,6 @@
       }
     }
 
-    // ---------- FÍSICA ----------
     function updatePhysics() {
       for (let b of balls) {
         b.vy += GRAVITY;
@@ -477,7 +502,6 @@
       updateMassDisplay();
     }
 
-    // ---------- DESENHO ----------
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = '#6e4f3a';
@@ -523,7 +547,6 @@
       ctx.globalAlpha = 1.0;
     }
 
-    // ---------- LOOP ----------
     function gameLoop() {
       if (isRunning) {
         updatePhysics();
@@ -532,7 +555,6 @@
       }
     }
 
-    // ---------- LANÇAR (clique) ----------
     function launchBalls(clickX, clickY) {
       for (let b of balls) {
         const dx = b.x - clickX;
@@ -554,10 +576,8 @@
       updateEnergyDisplay();
     }
 
-    // ---------- CONTROLES POR TECLADO (individual) ----------
     function handleKeyDown(e) {
       const key = e.key;
-      // Basquete: W / S
       if (key === 'w' || key === 'W') {
         const b = balls.find(b => b.id === 'basquete');
         if (b) { b.vy -= 2.0; b.vx += (Math.random()-0.5)*0.3; }
@@ -566,9 +586,7 @@
         const b = balls.find(b => b.id === 'basquete');
         if (b) { b.vy += 2.0; b.vx += (Math.random()-0.5)*0.3; }
         e.preventDefault();
-      }
-      // Vôlei: I / K
-      else if (key === 'i' || key === 'I') {
+      } else if (key === 'i' || key === 'I') {
         const b = balls.find(b => b.id === 'volei');
         if (b) { b.vy -= 2.4; b.vx += (Math.random()-0.5)*0.3; }
         e.preventDefault();
@@ -576,9 +594,7 @@
         const b = balls.find(b => b.id === 'volei');
         if (b) { b.vy += 2.4; b.vx += (Math.random()-0.5)*0.3; }
         e.preventDefault();
-      }
-      // Pequena: seta para cima / para baixo
-      else if (key === 'ArrowUp') {
+      } else if (key === 'ArrowUp') {
         const b = balls.find(b => b.id === 'pequena');
         if (b) { b.vy -= 3.0; b.vx += (Math.random()-0.5)*0.4; }
         e.preventDefault();
@@ -589,7 +605,6 @@
       }
     }
 
-    // ---------- EVENTOS ----------
     function handleCanvasClick(e) {
       const rect = canvas.getBoundingClientRect();
       const scaleX = canvas.width / rect.width;
@@ -616,7 +631,6 @@
       updateEnergyDisplay();
     }
 
-    // ---------- INICIALIZAÇÃO ----------
     resetPositions();
 
     canvas.addEventListener('click', handleCanvasClick);
@@ -626,11 +640,7 @@
     document.getElementById('dropBtn').addEventListener('click', dropBalls);
     document.getElementById('resetBtn').addEventListener('click', resetPositions);
 
-    // Inicia o loop (já fica rodando, mas o canvas só aparece após start)
     gameLoop();
-
-    // Se o jogo já estiver visível (caso de reload) mas a tela inicial some apenas com clique
-    // por padrão a tela inicial é mostrada.
   })();
 </script>
 </body>

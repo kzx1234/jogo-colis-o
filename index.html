@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Colisão em Queda · Basquete, Vôlei & Pequena</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      background: linear-gradient(145deg, #0b1a2e, #1a2f44);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+      margin: 0;
+      padding: 16px;
+    }
+    .game-card {
+      background: #1e3b4f;
+      padding: 24px 24px 30px;
+      border-radius: 48px 48px 32px 32px;
+      box-shadow: 0 20px 35px rgba(0,0,0,0.7), inset 0 1px 4px rgba(255,255,240,0.15);
+      backdrop-filter: blur(2px);
+      border: 1px solid #5b8c9e;
+      max-width: 780px;
+      width: 100%;
+      transition: all 0.2s;
+    }
+    h1 {
+      text-align: center;
+      font-weight: 500;
+      letter-spacing: 2px;
+      color: #f2e8d5;
+      text-shadow: 0 3px 0 #0f2838, 0 5px 12px rgba(0,0,0,0.6);
+      margin: -8px 0 12px 0;
+      font-size: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    h1 small {
+      font-size: 1rem;
+      background: #2c5368;
+      padding: 0 16px;
+      border-radius: 60px;
+      color: #d4e9ff;
+      font-weight: 400;
+      box-shadow: inset 0 -2px 0 #0d293b;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      aspect-ratio: 800 / 460;
+      background: #b3d6e8;
+      background-image: radial-gradient(circle at 20% 30%, #d4edff 5%, #8ab3cc 80%);
+      border-radius: 40px;
+      box-shadow: inset 0 -6px 0 #3d667b, 0 12px 28px rgba(0,0,0,0.6);
+      margin: 10px 0 18px 0;
+      cursor: pointer;
+      touch-action: none;
+    }
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      background: #143141;
+      padding: 12px 20px;
+      border-radius: 100px;
+      box-shadow: inset 0 3px 6px #0b1f2b, 0 6px 8px rgba(0,0,0,0.3);
+      border: 1px solid #46758b;
+    }
+    .badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #1f4055;
+      padding: 4px 18px 4px 14px;
+      border-radius: 40px;
+      color: #ebf7ff;
+      font-weight: 500;
+      font-size: 1rem;
+      box-shadow: inset 0 -2px 0 #0f2c3d;
+    }
+    .badge span {
+      background: #00000030;
+      padding: 0 10px;
+      border-radius: 30px;
+      font-weight: 700;
+      color: #ffecbf;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    button {
+      background: #e6b13e;
+      border: none;
+      color: #1e2f3a;
+      font-weight: 700;
+      padding: 8px 18px;
+      border-radius: 60px;
+      font-size: 1rem;
+      letter-spacing: 0.5px;
+      box-shadow: 0 5px 0 #7f5f24, 0 4px 12px rgba(0,0,0,0.4);
+      transition: all 0.06s linear;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      border: 1px solid #ffd966;
+    }
+    button:active {
+      transform: translateY(4px);
+      box-shadow: 0 1px 0 #7f5f24;
+    }
+    button.reset {
+      background: #da7b7b;
+      border-color: #f7bebe;
+      box-shadow: 0 5px 0 #7a4040;
+      color: #1f1b1b;
+    }
+    button.reset:active {
+      transform: translateY(4px);
+      box-shadow: 0 1px 0 #7a4040;
+    }
+    .info-text {
+      color: #b4d9ed;
+      text-align: center;
+      margin: 16px 0 0 0;
+      font-size: 0.9rem;
+      font-weight: 400;
+      background: #1f3749;
+      padding: 6px 12px;
+      border-radius: 80px;
+      display: inline-block;
+      backdrop-filter: blur(4px);
+      border: 1px solid #3f7188;
+    }
+    .info-text i {
+      font-style: normal;
+      display: inline-block;
+      background: #132d3d;
+      padding: 0 12px;
+      border-radius: 30px;
+      margin: 0 4px;
+    }
+    .footer {
+      display: flex;
+      justify-content: center;
+    }
+    @media (max-width: 500px) {
+      .game-card { padding: 16px; }
+      .stats { flex-direction: column; align-items: stretch; }
+      .controls { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+<div class="game-card">
+  <h1>
+    ⛹️‍♂️ COLISÃO <small>basquete · vôlei · pequena</small>
+  </h1>
+  <canvas id="gameCanvas" width="800" height="460"></canvas>
+
+  <div class="stats">
+    <div class="badge">⚡ <span id="energyDisplay">0.0</span> J</div>
+    <div class="badge">🏀 <span id="massDisplay">3.2</span> kg</div>
+    <div class="controls">
+      <button id="dropBtn" title="Largar bolas">⬇️ QUEDA</button>
+      <button id="resetBtn" class="reset" title="Reiniciar posições">⟳ REINICIAR</button>
+    </div>
+  </div>
+  <div class="footer">
+    <div class="info-text">
+      <i>🟠 basquete 2.0 kg</i>  <i>🔵 vôlei 0.8 kg</i>  <i>⚪ pequena 0.2 kg</i>  —  clique no canvas para lançar
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // display elements
+    const energySpan = document.getElementById('energyDisplay');
+    const massSpan = document.getElementById('massDisplay');
+
+    // ---------- CONFIGURAÇÕES FÍSICAS ----------
+    const GRAVITY = 0.35;          // aceleração (px/frame²)
+    const FLOOR_Y = 410;           // chão (y)
+    const WALL_LEFT = 30;
+    const WALL_RIGHT = 770;
+
+    // ---------- BOLAS ----------
+    // cada bola: { x, y, vx, vy, radius, mass, color, label, restitution }
+    let balls = [];
+
+    // parâmetros das bolas (massas e raios)
+    const BASKETBALL = { radius: 24, mass: 2.0, color: '#e06b3d', label: '🏀', restitution: 0.65 };
+    const VOLLEYBALL = { radius: 20, mass: 0.8, color: '#3b8fc2', label: '🏐', restitution: 0.60 };
+    const SMALLBALL  = { radius: 14, mass: 0.2, color: '#e6e6e6', label: '⚪', restitution: 0.55 };
+
+    // posições iniciais
+    function initBalls() {
+      return [
+        { 
+          x: 200, y: 120, vx: 0, vy: 0,
+          radius: BASKETBALL.radius, mass: BASKETBALL.mass, 
+          color: BASKETBALL.color, label: BASKETBALL.label,
+          restitution: BASKETBALL.restitution
+        },
+        { 
+          x: 400, y: 100, vx: 0, vy: 0,
+          radius: VOLLEYBALL.radius, mass: VOLLEYBALL.mass,
+          color: VOLLEYBALL.color, label: VOLLEYBALL.label,
+          restitution: VOLLEYBALL.restitution
+        },
+        { 
+          x: 600, y: 80, vx: 0, vy: 0,
+          radius: SMALLBALL.radius, mass: SMALLBALL.mass,
+          color: SMALLBALL.color, label: SMALLBALL.label,
+          restitution: SMALLBALL.restitution
+        }
+      ];
+    }
+
+    // estado
+    let isRunning = true;
+
+    // ---------- FUNÇÕES AUXILIARES ----------
+    function resetPositions() {
+      balls = initBalls();
+      // zerar velocidades
+      for (let b of balls) {
+        b.vx = 0;
+        b.vy = 0;
+      }
+      updateEnergyDisplay();
+      updateMassDisplay();
+    }
+
+    // cálculo da energia cinética total (Joule simbólico)
+    function computeTotalEnergy() {
+      let total = 0;
+      for (let b of balls) {
+        const speed = Math.hypot(b.vx, b.vy);
+        total += 0.5 * b.mass * speed * speed;
+      }
+      return total;
+    }
+
+    function updateEnergyDisplay() {
+      const e = computeTotalEnergy();
+      energySpan.textContent = e.toFixed(1);
+    }
+
+    function updateMassDisplay() {
+      // massa total do sistema (para referência)
+      const totalMass = balls.reduce((sum, b) => sum + b.mass, 0);
+      massSpan.textContent = totalMass.toFixed(1);
+    }
+
+    // ---------- COLISÕES (elásticas + perda de energia) ----------
+    function resolveCollisions() {
+      const len = balls.length;
+      for (let i = 0; i < len; i++) {
+        for (let j = i + 1; j < len; j++) {
+          const a = balls[i];
+          const b = balls[j];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.hypot(dx, dy);
+          const minDist = a.radius + b.radius;
+
+          if (dist < minDist && dist > 0.001) {
+            // normal
+            const nx = dx / dist;
+            const ny = dy / dist;
+
+            // separação para evitar overlapp
+            const overlap = (minDist - dist) * 0.5;
+            a.x -= nx * overlap;
+            a.y -= ny * overlap;
+            b.x += nx * overlap;
+            b.y += ny * overlap;
+
+            // velocidades relativas
+            const dvx = a.vx - b.vx;
+            const dvy = a.vy - b.vy;
+            const relVn = dvx * nx + dvy * ny;
+
+            if (relVn > 0) continue; // já se afastando
+
+            // fator de restituição (média ponderada pela massa? usamos a menor restituição para efeito realista)
+            const e = Math.min(a.restitution, b.restitution);
+            // massa total
+            const totalMass = a.mass + b.mass;
+            const impulse = -(1 + e) * relVn / totalMass;
+
+            a.vx += impulse * b.mass * nx;
+            a.vy += impulse * b.mass * ny;
+            b.vx -= impulse * a.mass * nx;
+            b.vy -= impulse * a.mass * ny;
+          }
+        }
+      }
+    }
+
+    // ---------- FÍSICA (update) ----------
+    function updatePhysics() {
+      // gravidade e movimento
+      for (let b of balls) {
+        b.vy += GRAVITY;
+        b.x += b.vx;
+        b.y += b.vy;
+      }
+
+      // colisões entre bolas
+      resolveCollisions();
+
+      // colisões com paredes e chão
+      for (let b of balls) {
+        // chão
+        if (b.y + b.radius > FLOOR_Y) {
+          b.y = FLOOR_Y - b.radius;
+          if (b.vy > 0) {
+            b.vy *= -b.restitution;
+            // pequena perda de energia na colisão com o chão (já incluso na restituição)
+            if (Math.abs(b.vy) < 0.3) b.vy = 0;
+          }
+        }
+        // parede esquerda
+        if (b.x - b.radius < WALL_LEFT) {
+          b.x = WALL_LEFT + b.radius;
+          if (b.vx < 0) b.vx *= -b.restitution;
+        }
+        // parede direita
+        if (b.x + b.radius > WALL_RIGHT) {
+          b.x = WALL_RIGHT - b.radius;
+          if (b.vx > 0) b.vx *= -b.restitution;
+        }
+        // teto (caso subam muito)
+        if (b.y - b.radius < 10) {
+          b.y = 10 + b.radius;
+          if (b.vy < 0) b.vy *= -b.restitution;
+        }
+      }
+
+      // atualiza display de energia e massa
+      updateEnergyDisplay();
+      updateMassDisplay();
+    }
+
+    // ---------- DESENHO ----------
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // chão com textura simples
+      ctx.fillStyle = '#6e4f3a';
+      ctx.fillRect(0, FLOOR_Y, canvas.width, 6);
+      ctx.fillStyle = '#8b6b52';
+      ctx.fillRect(0, FLOOR_Y+4, canvas.width, 8);
+      // linha de quadra
+      ctx.fillStyle = '#ffffff30';
+      ctx.fillRect(0, FLOOR_Y-2, canvas.width, 3);
+
+      // sombras e bolas
+      for (let b of balls) {
+        // sombra
+        ctx.shadowColor = 'rgba(0,0,0,0.2)';
+        ctx.shadowBlur = 12;
+        ctx.shadowOffsetY = 6;
+
+        // corpo da bola (gradiente)
+        const grd = ctx.createRadialGradient(
+          b.x - 6, b.y - 8, 4,
+          b.x, b.y, b.radius+2
+        );
+        grd.addColorStop(0, '#fff8f0');
+        grd.addColorStop(0.4, b.color);
+        grd.addColorStop(1, '#1f1f1f');
+
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.radius, 0, Math.PI*2);
+        ctx.fillStyle = grd;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.strokeStyle = '#00000055';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        // label (emoji)
+        ctx.font = `${b.radius * 0.9}px 'Segoe UI', system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#0b0b0b';
+        ctx.fillText(b.label, b.x, b.y-2);
+
+        // pequeno indicador de massa
+        ctx.font = 'bold 10px monospace';
+        ctx.fillStyle = '#f0faff';
+        ctx.shadowColor = '#00000080';
+        ctx.shadowBlur = 4;
+        ctx.fillText(`${b.mass.toFixed(1)}kg`, b.x, b.y + b.radius + 14);
+        ctx.shadowBlur = 0;
+      }
+
+      // informativo de "clique para lançar"
+      ctx.font = '14px "Segoe UI", sans-serif';
+      ctx.fillStyle = '#192f3d';
+      ctx.globalAlpha = 0.4;
+      ctx.fillText('clique no canvas para lançar para cima', 20, 30);
+      ctx.globalAlpha = 1.0;
+    }
+
+    // ---------- LOOP ANIMADO ----------
+    function gameLoop() {
+      if (isRunning) {
+        updatePhysics();
+        draw();
+        requestAnimationFrame(gameLoop);
+      }
+    }
+
+    // ---------- LANÇAR BOLAS (clique) ----------
+    function launchBalls(clickX, clickY) {
+      // Cada bola recebe um impulso para cima e ligeiramente para os lados (simula colisão com a mão)
+      for (let i = 0; i < balls.length; i++) {
+        const b = balls[i];
+        // direção a partir do clique (efeito "soco")
+        const dx = b.x - clickX;
+        const dy = b.y - clickY;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 1) continue;
+        const normX = dx / dist;
+        const normY = dy / dist;
+        // Força de lançamento: depende da massa (as mais leves sobem mais)
+        const baseForce = 5.0 + Math.random() * 2.5;
+        // Quanto mais leve, maior aceleração (F = m*a) -> a = F/m, mas usamos impulso direto
+        const impulse = 4.5 / (b.mass + 0.1); 
+        b.vx += normX * impulse * 1.6;
+        b.vy += normY * impulse * 1.6 - 3.2; // para cima
+        // limite de velocidade
+        const maxSpeed = 18;
+        const sp = Math.hypot(b.vx, b.vy);
+        if (sp > maxSpeed) {
+          b.vx = (b.vx / sp) * maxSpeed;
+          b.vy = (b.vy / sp) * maxSpeed;
+        }
+      }
+      updateEnergyDisplay();
+    }
+
+    // ---------- EVENTOS ----------
+    function handleCanvasClick(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const mouseX = (e.clientX - rect.left) * scaleX;
+      const mouseY = (e.clientY - rect.top) * scaleY;
+      launchBalls(mouseX, mouseY);
+    }
+
+    // touch
+    function handleTouch(e) {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches[0];
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const touchX = (touch.clientX - rect.left) * scaleX;
+      const touchY = (touch.clientY - rect.top) * scaleY;
+      launchBalls(touchX, touchY);
+    }
+
+    // Botão "Queda" - larga as bolas do topo (simula abandono)
+    function dropBalls() {
+      for (let b of balls) {
+        b.x = 150 + Math.random() * 500;
+        b.y = 60 + Math.random() * 40;
+        b.vx = (Math.random() - 0.5) * 1.2;
+        b.vy = 0.5 + Math.random() * 1.2;
+      }
+      updateEnergyDisplay();
+    }
+
+    // ---------- INICIALIZAÇÃO ----------
+    function init() {
+      resetPositions();
+
+      // eventos
+      canvas.addEventListener('click', handleCanvasClick);
+      canvas.addEventListener('touchstart', handleTouch, { passive: false });
+
+      document.getElementById('dropBtn').addEventListener('click', dropBalls);
+      document.getElementById('resetBtn').addEventListener('click', resetPositions);
+
+      // loop
+      isRunning = true;
+      gameLoop();
+    }
+
+    init();
+
+    // garantir que o loop não pare (em caso de erro)
+    window.addEventListener('error', ()=> { isRunning = true; });
+  })();
+</script>
+</body>
+</html>

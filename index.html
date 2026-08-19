@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Colisão · Trabalho de Física</title>
+  <title>Colisão · Física Realista</title>
   <style>
     * {
       box-sizing: border-box;
@@ -24,7 +24,6 @@
       max-width: 820px;
       width: 100%;
     }
-    /* ---------- TELA INICIAL ---------- */
     #startScreen {
       background: #1e3b4f;
       border-radius: 60px 60px 40px 40px;
@@ -101,8 +100,6 @@
       font-style: normal;
       font-size: 2rem;
     }
-
-    /* ---------- JOGO ---------- */
     #gameContainer {
       display: none;
       opacity: 0;
@@ -112,7 +109,6 @@
       display: block;
       opacity: 1;
     }
-
     .game-card {
       background: #1e3b4f;
       padding: 24px 24px 30px;
@@ -315,7 +311,7 @@
   <div id="gameContainer">
     <div class="game-card">
       <h2>
-        ⛹️‍♂️ COLISÃO <small>basquete · vôlei · pequena</small>
+        ⛹️‍♂️ COLISÃO REALISTA <small>basquete · vôlei · pequena</small>
       </h2>
       <canvas id="gameCanvas" width="800" height="460"></canvas>
 
@@ -328,7 +324,6 @@
         </div>
       </div>
 
-      <!-- INDICADORES DE MASSA INDIVIDUAIS -->
       <div class="footer-center">
         <div class="mass-indicators">
           <span class="item"><span class="dot" style="background:#e06b3d;"></span> Basquete: <strong>2.0 kg</strong></span>
@@ -375,14 +370,18 @@
     const energySpan = document.getElementById('energyDisplay');
     const massSpan = document.getElementById('massDisplay');
 
-    const GRAVITY = 0.35;
+    // ---------- CONSTANTES FÍSICAS REALISTAS ----------
+    const GRAVITY = 0.4;
     const FLOOR_Y = 410;
     const WALL_LEFT = 30;
     const WALL_RIGHT = 770;
+    const AIR_RESISTANCE = 0.9995; // Arrasto do ar (muito leve)
+    const FRICTION = 0.98; // Atrito com o chão (perda de energia)
 
-    const BASKETBALL = { radius: 24, mass: 2.0, color: '#e06b3d', label: '🏀', restitution: 0.65 };
-    const VOLLEYBALL = { radius: 20, mass: 0.8, color: '#3b8fc2', label: '🏐', restitution: 0.60 };
-    const SMALLBALL  = { radius: 14, mass: 0.2, color: '#e6e6e6', label: '⚪', restitution: 0.55 };
+    // ---------- BOLAS ----------
+    const BASKETBALL = { radius: 24, mass: 2.0, color: '#e06b3d', label: '🏀', restitution: 0.75 };
+    const VOLLEYBALL = { radius: 20, mass: 0.8, color: '#3b8fc2', label: '🏐', restitution: 0.70 };
+    const SMALLBALL  = { radius: 14, mass: 0.2, color: '#e6e6e6', label: '⚪', restitution: 0.65 };
 
     let balls = [];
 
@@ -393,21 +392,27 @@
           radius: BASKETBALL.radius, mass: BASKETBALL.mass, 
           color: BASKETBALL.color, label: BASKETBALL.label,
           restitution: BASKETBALL.restitution,
-          id: 'basquete'
+          id: 'basquete',
+          rotation: 0, // rotação para efeito visual
+          angularVel: 0
         },
         { 
           x: 400, y: 100, vx: 0, vy: 0,
           radius: VOLLEYBALL.radius, mass: VOLLEYBALL.mass,
           color: VOLLEYBALL.color, label: VOLLEYBALL.label,
           restitution: VOLLEYBALL.restitution,
-          id: 'volei'
+          id: 'volei',
+          rotation: 0,
+          angularVel: 0
         },
         { 
           x: 600, y: 80, vx: 0, vy: 0,
           radius: SMALLBALL.radius, mass: SMALLBALL.mass,
           color: SMALLBALL.color, label: SMALLBALL.label,
           restitution: SMALLBALL.restitution,
-          id: 'pequena'
+          id: 'pequena',
+          rotation: 0,
+          angularVel: 0
         }
       ];
     }
@@ -416,7 +421,12 @@
 
     function resetPositions() {
       balls = initBalls();
-      for (let b of balls) { b.vx = 0; b.vy = 0; }
+      for (let b of balls) { 
+        b.vx = 0; 
+        b.vy = 0;
+        b.rotation = 0;
+        b.angularVel = 0;
+      }
       updateEnergyDisplay();
       updateMassDisplay();
     }
@@ -439,71 +449,146 @@
       massSpan.textContent = totalMass.toFixed(1);
     }
 
+    // ---------- COLISÃO PERFEITAMENTE ELÁSTICA (mais realista) ----------
     function resolveCollisions() {
       const len = balls.length;
       for (let i = 0; i < len; i++) {
         for (let j = i + 1; j < len; j++) {
           const a = balls[i];
           const b = balls[j];
+          
+          // Distância entre os centros
           const dx = b.x - a.x;
           const dy = b.y - a.y;
           const dist = Math.hypot(dx, dy);
           const minDist = a.radius + b.radius;
+          
           if (dist < minDist && dist > 0.001) {
+            // Vetor normal de colisão
             const nx = dx / dist;
             const ny = dy / dist;
+            
+            // Separar as bolas para evitar overlapp (com suavidade)
             const overlap = (minDist - dist) * 0.5;
-            a.x -= nx * overlap;
-            a.y -= ny * overlap;
-            b.x += nx * overlap;
-            b.y += ny * overlap;
+            a.x -= nx * overlap * 1.02;
+            a.y -= ny * overlap * 1.02;
+            b.x += nx * overlap * 1.02;
+            b.y += ny * overlap * 1.02;
+            
+            // Velocidades relativas
             const dvx = a.vx - b.vx;
             const dvy = a.vy - b.vy;
             const relVn = dvx * nx + dvy * ny;
+            
+            // Só resolve se estiverem se aproximando
             if (relVn > 0) continue;
-            const e = Math.min(a.restitution, b.restitution);
+            
+            // Coeficiente de restituição (média ponderada)
+            const e = (a.restitution * a.mass + b.restitution * b.mass) / (a.mass + b.mass);
+            
+            // Massa total
             const totalMass = a.mass + b.mass;
+            
+            // Impulso (colisão elástica com restituição)
             const impulse = -(1 + e) * relVn / totalMass;
+            
+            // Aplicar impulso
             a.vx += impulse * b.mass * nx;
             a.vy += impulse * b.mass * ny;
             b.vx -= impulse * a.mass * nx;
             b.vy -= impulse * a.mass * ny;
+            
+            // Efeito de rotação (spin) na colisão - mais realista
+            const tangencialX = -ny;
+            const tangencialY = nx;
+            const relVt = (a.vx - b.vx) * tangencialX + (a.vy - b.vy) * tangencialY;
+            
+            // Transferir parte da energia para rotação
+            const spinTransfer = 0.15;
+            a.angularVel += relVt * spinTransfer / a.radius;
+            b.angularVel -= relVt * spinTransfer / b.radius;
           }
         }
       }
     }
 
+    // ---------- FÍSICA ATUALIZADA ----------
     function updatePhysics() {
+      // Aplicar gravidade e movimento
       for (let b of balls) {
+        // Gravidade
         b.vy += GRAVITY;
+        
+        // Resistência do ar (arrasto)
+        b.vx *= AIR_RESISTANCE;
+        b.vy *= AIR_RESISTANCE;
+        
+        // Atualizar posição
         b.x += b.vx;
         b.y += b.vy;
+        
+        // Atualizar rotação (spin)
+        b.rotation += b.angularVel * 0.02;
+        b.angularVel *= 0.99; // Amortecimento da rotação
       }
-      resolveCollisions();
+      
+      // Resolver colisões entre bolas (2 iterações para maior estabilidade)
+      for (let iter = 0; iter < 2; iter++) {
+        resolveCollisions();
+      }
+      
+      // Colisões com paredes e chão (com física realista)
       for (let b of balls) {
+        // Chão
         if (b.y + b.radius > FLOOR_Y) {
           b.y = FLOOR_Y - b.radius;
-          if (b.vy > 0) { b.vy *= -b.restitution; if (Math.abs(b.vy) < 0.3) b.vy = 0; }
+          if (b.vy > 0) {
+            // Perda de energia no chão (restituição)
+            b.vy *= -b.restitution;
+            // Atrito com o chão (reduz velocidade horizontal)
+            b.vx *= FRICTION;
+            // Transferir energia para rotação
+            b.angularVel += b.vx * 0.02 / b.radius;
+            if (Math.abs(b.vy) < 0.2) b.vy = 0;
+          }
         }
+        
+        // Parede esquerda
         if (b.x - b.radius < WALL_LEFT) {
           b.x = WALL_LEFT + b.radius;
-          if (b.vx < 0) b.vx *= -b.restitution;
+          if (b.vx < 0) {
+            b.vx *= -b.restitution * 0.9;
+            b.angularVel += b.vy * 0.02 / b.radius;
+          }
         }
+        
+        // Parede direita
         if (b.x + b.radius > WALL_RIGHT) {
           b.x = WALL_RIGHT - b.radius;
-          if (b.vx > 0) b.vx *= -b.restitution;
+          if (b.vx > 0) {
+            b.vx *= -b.restitution * 0.9;
+            b.angularVel -= b.vy * 0.02 / b.radius;
+          }
         }
+        
+        // Teto
         if (b.y - b.radius < 10) {
           b.y = 10 + b.radius;
-          if (b.vy < 0) b.vy *= -b.restitution;
+          if (b.vy < 0) {
+            b.vy *= -b.restitution * 0.8;
+          }
         }
       }
+      
       updateEnergyDisplay();
       updateMassDisplay();
     }
 
+    // ---------- DESENHO COM ROTAÇÃO ----------
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Chão
       ctx.fillStyle = '#6e4f3a';
       ctx.fillRect(0, FLOOR_Y, canvas.width, 6);
       ctx.fillStyle = '#8b6b52';
@@ -512,27 +597,59 @@
       ctx.fillRect(0, FLOOR_Y-2, canvas.width, 3);
 
       for (let b of balls) {
+        ctx.save();
+        ctx.translate(b.x, b.y);
+        ctx.rotate(b.rotation);
+        
+        // Sombra
         ctx.shadowColor = 'rgba(0,0,0,0.2)';
         ctx.shadowBlur = 12;
         ctx.shadowOffsetY = 6;
-        const grd = ctx.createRadialGradient(b.x-6, b.y-8, 4, b.x, b.y, b.radius+2);
+        
+        // Gradiente 3D
+        const grd = ctx.createRadialGradient(-6, -8, 4, 0, 0, b.radius+2);
         grd.addColorStop(0, '#fff8f0');
-        grd.addColorStop(0.4, b.color);
+        grd.addColorStop(0.3, b.color);
         grd.addColorStop(1, '#1f1f1f');
+        
         ctx.beginPath();
-        ctx.arc(b.x, b.y, b.radius, 0, Math.PI*2);
+        ctx.arc(0, 0, b.radius, 0, Math.PI*2);
         ctx.fillStyle = grd;
         ctx.fill();
+        
         ctx.shadowBlur = 0;
         ctx.shadowOffsetY = 0;
         ctx.strokeStyle = '#00000055';
         ctx.lineWidth = 1.2;
         ctx.stroke();
+        
+        // Linhas de rotação (efeito de giro)
+        ctx.strokeStyle = '#ffffff30';
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < 3; i++) {
+          const angle = (i / 3) * Math.PI * 2 + b.rotation;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(Math.cos(angle) * b.radius * 0.85, Math.sin(angle) * b.radius * 0.85);
+          ctx.stroke();
+        }
+        
+        // Círculo central
+        ctx.beginPath();
+        ctx.arc(0, 0, b.radius * 0.25, 0, Math.PI*2);
+        ctx.fillStyle = '#ffffff30';
+        ctx.fill();
+        
+        ctx.restore();
+        
+        // Label (fora da rotação para legibilidade)
         ctx.font = `${b.radius * 0.9}px 'Segoe UI', system-ui, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = '#0b0b0b';
         ctx.fillText(b.label, b.x, b.y-2);
+        
+        // Massa abaixo da bola
         ctx.font = 'bold 10px monospace';
         ctx.fillStyle = '#f0faff';
         ctx.shadowColor = '#00000080';
@@ -540,6 +657,7 @@
         ctx.fillText(`${b.mass.toFixed(1)}kg`, b.x, b.y + b.radius + 14);
         ctx.shadowBlur = 0;
       }
+      
       ctx.font = '13px "Segoe UI", sans-serif';
       ctx.fillStyle = '#192f3d';
       ctx.globalAlpha = 0.35;
@@ -555,6 +673,7 @@
       }
     }
 
+    // ---------- LANÇAMENTO ----------
     function launchBalls(clickX, clickY) {
       for (let b of balls) {
         const dx = b.x - clickX;
@@ -563,10 +682,12 @@
         if (dist < 1) continue;
         const normX = dx / dist;
         const normY = dy / dist;
-        const impulse = 4.5 / (b.mass + 0.1);
-        b.vx += normX * impulse * 1.6;
-        b.vy += normY * impulse * 1.6 - 3.2;
-        const maxSpeed = 18;
+        const impulse = 5.0 / (b.mass + 0.1);
+        b.vx += normX * impulse * 1.8;
+        b.vy += normY * impulse * 1.8 - 3.5;
+        // Adicionar spin baseado na direção
+        b.angularVel += (Math.random() - 0.5) * 0.3;
+        const maxSpeed = 20;
         const sp = Math.hypot(b.vx, b.vy);
         if (sp > maxSpeed) {
           b.vx = (b.vx / sp) * maxSpeed;
@@ -576,35 +697,42 @@
       updateEnergyDisplay();
     }
 
+    // ---------- CONTROLES POR TECLADO ----------
     function handleKeyDown(e) {
       const key = e.key;
+      // Basquete: W / S
       if (key === 'w' || key === 'W') {
         const b = balls.find(b => b.id === 'basquete');
-        if (b) { b.vy -= 2.0; b.vx += (Math.random()-0.5)*0.3; }
+        if (b) { b.vy -= 2.5; b.vx += (Math.random()-0.5)*0.5; }
         e.preventDefault();
       } else if (key === 's' || key === 'S') {
         const b = balls.find(b => b.id === 'basquete');
-        if (b) { b.vy += 2.0; b.vx += (Math.random()-0.5)*0.3; }
+        if (b) { b.vy += 2.5; b.vx += (Math.random()-0.5)*0.5; }
         e.preventDefault();
-      } else if (key === 'i' || key === 'I') {
+      }
+      // Vôlei: I / K
+      else if (key === 'i' || key === 'I') {
         const b = balls.find(b => b.id === 'volei');
-        if (b) { b.vy -= 2.4; b.vx += (Math.random()-0.5)*0.3; }
+        if (b) { b.vy -= 3.0; b.vx += (Math.random()-0.5)*0.5; }
         e.preventDefault();
       } else if (key === 'k' || key === 'K') {
         const b = balls.find(b => b.id === 'volei');
-        if (b) { b.vy += 2.4; b.vx += (Math.random()-0.5)*0.3; }
+        if (b) { b.vy += 3.0; b.vx += (Math.random()-0.5)*0.5; }
         e.preventDefault();
-      } else if (key === 'ArrowUp') {
+      }
+      // Pequena: setas
+      else if (key === 'ArrowUp') {
         const b = balls.find(b => b.id === 'pequena');
-        if (b) { b.vy -= 3.0; b.vx += (Math.random()-0.5)*0.4; }
+        if (b) { b.vy -= 4.0; b.vx += (Math.random()-0.5)*0.6; }
         e.preventDefault();
       } else if (key === 'ArrowDown') {
         const b = balls.find(b => b.id === 'pequena');
-        if (b) { b.vy += 3.0; b.vx += (Math.random()-0.5)*0.4; }
+        if (b) { b.vy += 4.0; b.vx += (Math.random()-0.5)*0.6; }
         e.preventDefault();
       }
     }
 
+    // ---------- EVENTOS ----------
     function handleCanvasClick(e) {
       const rect = canvas.getBoundingClientRect();
       const scaleX = canvas.width / rect.width;
@@ -625,12 +753,14 @@
       for (let b of balls) {
         b.x = 150 + Math.random() * 500;
         b.y = 60 + Math.random() * 40;
-        b.vx = (Math.random() - 0.5) * 1.2;
-        b.vy = 0.5 + Math.random() * 1.2;
+        b.vx = (Math.random() - 0.5) * 1.5;
+        b.vy = 0.5 + Math.random() * 1.5;
+        b.angularVel = (Math.random() - 0.5) * 0.2;
       }
       updateEnergyDisplay();
     }
 
+    // ---------- INICIALIZAÇÃO ----------
     resetPositions();
 
     canvas.addEventListener('click', handleCanvasClick);
